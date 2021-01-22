@@ -2655,6 +2655,11 @@ impl<S> MidHandshakeSslStream<S> {
         self.stream.into_inner()
     }
 
+    /// Returns the inner `SslStream`
+    pub fn into_stream(self) -> SslStream<S> {
+        self.stream
+    }
+
     /// Restarts the handshake process.
     ///
     /// This corresponds to [`SSL_do_handshake`].
@@ -2822,6 +2827,22 @@ impl<S: Read + Write> SslStream<S> {
     /// [`SSL_set_shutdown`]: https://www.openssl.org/docs/man1.1.1/man3/SSL_set_shutdown.html
     pub fn set_shutdown(&mut self, state: ShutdownState) {
         unsafe { ffi::SSL_set_shutdown(self.ssl.as_ptr(), state.bits()) }
+    }
+
+    /// Initiates the handshake.
+    ///
+    /// This will fail if `set_accept_state` or `set_connect_state` was not called first.
+    ///
+    /// This corresponds to [`SSL_do_handshake`].
+    ///
+    /// [`SSL_do_handshake`]: https://www.openssl.org/docs/manmaster/man3/SSL_do_handshake.html
+    pub fn do_handshake(&mut self) -> Result<(), Error> {
+        let ret = unsafe { ffi::SSL_do_handshake(self.ssl.as_ptr()) };
+        if ret > 0 {
+            Ok(())
+        } else {
+            Err(self.make_error(ret))
+        }
     }
 }
 
